@@ -20,9 +20,11 @@
     <p>Isolating the raw Wasm-to-JS boundary cost ('Trampolining') and comparing it against the heavy cost of DOM updates</p>
 
     <button id="runBtn" onclick="runSuite()">Run Full Benchmark Suite</button>
-    <span id="status" style="margin-left: 10px; color: blue;"></span>
+    <span id="status" style="margin-left: 15px; font-weight: 500; color: #007bff;"></span>
 
-    <div id="target" style="margin: 20px 0; font-weight: bold; color: green;">0</div>
+    <div style="margin-top: 20px; padding: 10px; border: 1px solid #eee; background: #f9f9f9;">
+        <strong>Live DOM Target:</strong> <span id="target" style="color: green; font-weight: bold;">0</span>
+    </div>
 
     <table id="resultsTable">
         <thead>
