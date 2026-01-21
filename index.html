@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wasm vs JS</title>
+</head>
+<body>
+    <h1>Wasm vs JS Benchmark</h1>
+    <div id="target">0</div>
+    <div id="results" style="font-family: monospace; white-space: pre;"></div>
+    <button onclick="runExperiment()">Run Benchmark</button>
+
+    <script>
+        const ITERATIONS = 10_000_000;
+        const targetDiv = document.getElementById('target');
+        const resultsDiv = document.getElementById('results');
+
+        // The function we will import into Wasm
+        const js_update_dom = (counter) => {
+            // targetDiv.innerText = counter;
+            // Just measure the time it takes to call a js function
+        };
+
+        // The Import Object
+        // This MUST match the (import "env" "js_update_dom") in the WAT file
+        const importObject = {
+            env: {
+                js_update_dom: js_update_dom
+            }
+        };
+
+        async function runExperiment() {
+            resultsDiv.innerText = "Loading Wasm...";
+
+            // Load and compile the raw wasm file
+            const wasmStream = await WebAssembly.instantiateStreaming(
+                fetch('experiment.wasm'),
+                importObject
+            );
+            const wasmInstance = wasmStream.instance;
+            console.log("Wasm loaded successfully!");
+
+            resultsDiv.innerText = "Running...";
+
+            // --- JS Benchmark ---
+            targetDiv.innerText = "0";
+            const startJS = performance.now();
+            for(let i = 0; i < ITERATIONS; i++) {
+                js_update_dom(i);
+            }
+            const endJS = performance.now();
+            const timeJS = endJS - startJS;
+
+            // --- Wasm Benchmark ---
+            targetDiv.innerText = "0";
+            const startWasm = performance.now();
+
+            // Call the exported function from WAT
+            wasmInstance.exports.run_benchmark(ITERATIONS);
+
+            const endWasm = performance.now();
+            const timeWasm = endWasm - startWasm;
+
+            // --- Results ---
+            const overhead = ((timeWasm - timeJS) / timeJS) * 100;
+
+            resultsDiv.innerHTML = `
+                <h3>Results (${ITERATIONS.toLocaleString()} iterations)</h3>
+                <p><strong>JS Direct:</strong> ${timeJS.toFixed(2)} ms</p>
+                <p><strong>Wasm -> JS:</strong> ${timeWasm.toFixed(2)} ms</p>
+                <p><strong>Wasm Overhead:</strong> ${overhead.toFixed(2)}% slower</p>
+            `;
+        }
+    </script>
+</body>
+</html>
