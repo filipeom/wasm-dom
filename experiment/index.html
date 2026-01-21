@@ -4,20 +4,42 @@
     <meta charset="UTF-8">
     <title>Wasm vs JS: The Scaling Benchmark</title>
     <style>
-        body { font-family: system-ui, sans-serif; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 0.9rem; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-        th { background-color: #f2f2f2; text-align: center; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .header-col { text-align: left; font-weight: bold; }
-        .highlight { color: #d9534f; font-weight: bold; } /* Red for slower */
-        .neutral { color: #555; }
-        button { padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { margin-bottom: 5px; }
+        .subtitle { color: #666; margin-bottom: 25px; font-size: 1.1rem; }
+
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+        th { background-color: #f8f9fa; text-align: center; font-weight: 600; }
+        tr:nth-child(even) { background-color: #fcfcfc; }
+
+        .header-col { text-align: left; font-weight: bold; background: #f8f9fa; }
+
+        /* Status Colors */
+        .slower { color: #d9534f; font-weight: bold; } /* Red */
+        .faster { color: #28a745; font-weight: bold; } /* Green */
+        .equal  { color: #999; font-style: italic; }    /* Grey */
+
+        button {
+            padding: 12px 24px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <h1>Wasm vs JS Interaction Benchmark</h1>
-    <p>Isolating the raw Wasm-to-JS boundary cost ('Trampolining') and comparing it against the heavy cost of DOM updates</p>
+
+    <p class="subtitle">
+        Isolating the raw Wasm-to-JS boundary cost ("Trampolining") and comparing it against the heavy cost of DOM updates.
+    </p>
 
     <button id="runBtn" onclick="runSuite()">Run Full Benchmark Suite</button>
     <span id="status" style="margin-left: 15px; font-weight: 500; color: #007bff;"></span>
@@ -29,17 +51,18 @@
     <table id="resultsTable">
         <thead>
             <tr>
-                <th rowspan="2">Iterations</th>
-                <th colspan="3">Experiment A: Pure Overhead (No Op)</th>
-                <th colspan="3">Experiment B: DOM Update (Heavy)</th>
+                <th rowspan="2" style="width: 15%;">Iterations</th>
+                <th colspan="3" style="background: #e3f2fd;">Experiment A: Boundary Overhead<br><small>(Empty Call - Pure Trampoline Cost)</small></th>
+                <th colspan="3" style="background: #fff3e0;">Experiment B: Real Workload<br><small>(DOM Update - Heavy Payload)</small></th>
             </tr>
             <tr>
-                <th>JS Time</th>
-                <th>Wasm Time</th>
-                <th>Factor</th>
-                <th>JS Time</th>
-                <th>Wasm Time</th>
-                <th>Factor</th>
+                <th style="background: #e3f2fd;">JS Direct</th>
+                <th style="background: #e3f2fd;">Wasm -> JS</th>
+                <th style="background: #e3f2fd;">Factor</th>
+
+                <th style="background: #fff3e0;">JS Direct</th>
+                <th style="background: #fff3e0;">Wasm -> JS</th>
+                <th style="background: #fff3e0;">Factor</th>
             </tr>
         </thead>
         <tbody>
@@ -127,13 +150,15 @@
 
             const ratio = wasmTime / jsTime;
             let factorText = "";
-            let cssClass = "neutral";
+            let cssClass = "equal";
 
+            // We use a 5% threshold to decide if it's actually different
             if (ratio > 1.05) {
                 factorText = `${ratio.toFixed(1)}x Slower`;
-                cssClass = "highlight";
+                cssClass = "slower";
             } else if (ratio < 0.95) {
                 factorText = `${(1/ratio).toFixed(1)}x Faster`;
+                cssClass = "faster";
             } else {
                 factorText = "Equal";
             }
