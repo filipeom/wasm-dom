@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wasm vs JS: The Scaling Benchmark</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 0.9rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #f2f2f2; text-align: center; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .header-col { text-align: left; font-weight: bold; }
+        .highlight { color: #d9534f; font-weight: bold; } /* Red for slower */
+        .neutral { color: #555; }
+        button { padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Wasm vs JS Interaction Benchmark</h1>
+    <p>Isolating the raw Wasm-to-JS boundary cost ('Trampolining') and comparing it against the heavy cost of DOM updates</p>
+
+    <button id="runBtn" onclick="runSuite()">Run Full Benchmark Suite</button>
+    <span id="status" style="margin-left: 10px; color: blue;"></span>
+
+    <div id="target" style="margin: 20px 0; font-weight: bold; color: green;">0</div>
+
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th rowspan="2">Iterations</th>
+                <th colspan="3">Experiment A: Pure Overhead (No Op)</th>
+                <th colspan="3">Experiment B: DOM Update (Heavy)</th>
+            </tr>
+            <tr>
+                <th>JS Time</th>
+                <th>Wasm Time</th>
+                <th>Factor</th>
+                <th>JS Time</th>
+                <th>Wasm Time</th>
+                <th>Factor</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+        // --- Configuration ---
+        const POWERS = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
+        const targetDiv = document.getElementById('target');
+        const tableBody = document.querySelector('#resultsTable tbody');
+        const statusSpan = document.getElementById('status');
+
+        // The Empty Function (for pure overhead measurement)
+        const js_empty = (i) => { return; };
+
+        // The DOM Function (for real world simulation)
+        const js_dom = (i) => { targetDiv.innerText = i; };
+
+        async function runSuite() {
+            document.getElementById('runBtn').disabled = true;
+            tableBody.innerHTML = ""; // Clear previous results
+
+            statusSpan.innerText = "Loading WebAssembly...";
+            const importObject = {
+                env: {
+                    js_empty: js_empty,
+                    js_dom: js_dom
+                }
+            };
+
+            const wasmStream = await WebAssembly.instantiateStreaming(
+                fetch('experiment.wasm'), importObject
+            );
+            const exports = wasmStream.instance.exports;
+
+            for (let iterations of POWERS) {
+                statusSpan.innerText = `Running ${iterations.toLocaleString()} iterations...`;
+
+                // Allow the browser to update the table
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
+
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="header-col">${iterations.toLocaleString()}</td>`;
+
+                // EXPERIMENT A: pure overhead measurement
+
+                // JS Direct
+                let start = performance.now();
+                for(let i=0; i<iterations; i++) js_empty(i);
+                let jsTimeA = performance.now() - start;
+
+                // Wasm -> JS
+                start = performance.now();
+                exports.bench_empty(iterations);
+                let wasmTimeA = performance.now() - start;
+
+                appendResultCells(row, jsTimeA, wasmTimeA);
+
+                // EXPERIMENT B: DOM Updates
+
+                // JS Direct
+                start = performance.now();
+                for(let i=0; i<iterations; i++) js_dom(i);
+                let jsTimeB = performance.now() - start;
+
+                // 2. Wasm -> JS
+                start = performance.now();
+                exports.bench_dom(iterations);
+                let wasmTimeB = performance.now() - start;
+
+                appendResultCells(row, jsTimeB, wasmTimeB);
+
+                tableBody.appendChild(row);
+            }
+
+            statusSpan.innerText = "Done!";
+            document.getElementById('runBtn').disabled = false;
+        }
+
+        function appendResultCells(row, jsTime, wasmTime) {
+            // Prevent division by zero for very fast runs
+            jsTime = Math.max(jsTime, 0.01);
+            wasmTime = Math.max(wasmTime, 0.01);
+
+            const ratio = wasmTime / jsTime;
+            let factorText = "";
+            let cssClass = "neutral";
+
+            if (ratio > 1.05) {
+                factorText = `${ratio.toFixed(1)}x Slower`;
+                cssClass = "highlight";
+            } else if (ratio < 0.95) {
+                factorText = `${(1/ratio).toFixed(1)}x Faster`;
+            } else {
+                factorText = "Equal";
+            }
+
+            row.innerHTML += `
+                <td>${jsTime.toFixed(2)} ms</td>
+                <td>${wasmTime.toFixed(2)} ms</td>
+                <td class="${cssClass}">${factorText}</td>
+            `;
+        }
+    </script>
+</body>
+</html>
