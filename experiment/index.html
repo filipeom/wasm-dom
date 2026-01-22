@@ -44,10 +44,6 @@
     <button id="runBtn" onclick="runSuite()">Run Full Benchmark Suite</button>
     <span id="status" style="margin-left: 15px; font-weight: 500; color: #007bff;"></span>
 
-    <div style="margin-top: 20px; padding: 10px; border: 1px solid #eee; background: #f9f9f9;">
-        <strong>Live DOM Target:</strong> <span id="target" style="color: green; font-weight: bold;">0</span>
-    </div>
-
     <table id="resultsTable">
         <thead>
             <tr>
@@ -69,10 +65,19 @@
             </tbody>
     </table>
 
+    <div style="margin-top: 20px; padding: 10px; border: 1px solid #eee; background: #f9f9f9;">
+        <strong>Live DOM Target:</strong> <span id="target" style="color: green; font-weight: bold;">0</span>
+        <ul id="targetList">
+          <li></li>
+        </ul>
+    </div>
+
+
     <script>
         // --- Configuration ---
         const POWERS = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
         const targetDiv = document.getElementById('target');
+        const targetList = document.getElementById('targetList');
         const tableBody = document.querySelector('#resultsTable tbody');
         const statusSpan = document.getElementById('status');
 
@@ -80,7 +85,14 @@
         const js_empty = (i) => { return; };
 
         // The DOM Function (for real world simulation)
-        const js_dom = (i) => { targetDiv.innerText = i; };
+        const js_dom = (i) => {
+          if (i % 10000 == 0) {
+            targetList.innerHTML = "";
+          }
+          const li = document.createElement('li');
+          li.textContent = `Item ${i}`;
+          targetList.appendChild(li);
+        };
 
         async function runSuite() {
             document.getElementById('runBtn').disabled = true;
@@ -111,11 +123,13 @@
                 // EXPERIMENT A: pure overhead measurement
 
                 // JS Direct
+                targetList.innerHTML = "";
                 let start = performance.now();
                 for(let i=0; i<iterations; i++) js_empty(i);
                 let jsTimeA = performance.now() - start;
 
                 // Wasm -> JS
+                targetList.innerHTML = "";
                 start = performance.now();
                 exports.bench_empty(iterations);
                 let wasmTimeA = performance.now() - start;
@@ -125,11 +139,13 @@
                 // EXPERIMENT B: DOM Updates
 
                 // JS Direct
+                targetList.innerHTML = "";
                 start = performance.now();
                 for(let i=0; i<iterations; i++) js_dom(i);
                 let jsTimeB = performance.now() - start;
 
                 // 2. Wasm -> JS
+                targetList.innerHTML = "";
                 start = performance.now();
                 exports.bench_dom(iterations);
                 let wasmTimeB = performance.now() - start;
