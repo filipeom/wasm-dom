@@ -32,6 +32,18 @@
         }
         button:hover { background: #0056b3; }
         button:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* List Styling */
+        #targetList {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: #fff;
+            list-style: none;
+            margin-top: 10px;
+       }
+       #targetList li { border-bottom: 1px solid #eee; padding: 2px 0; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -66,12 +78,11 @@
     </table>
 
     <div style="margin-top: 20px; padding: 10px; border: 1px solid #eee; background: #f9f9f9;">
-        <strong>Live DOM Target:</strong> <span id="target" style="color: green; font-weight: bold;">0</span>
+        <strong>Live DOM Target:</strong> <span id="target" style="color: green; font-weight: bold;"></span>
         <ul id="targetList">
-          <li></li>
+          <li>(this where the list items will appear)</li>
         </ul>
     </div>
-
 
     <script>
         // --- Configuration ---
@@ -86,9 +97,8 @@
 
         // The DOM Function (for real world simulation)
         const js_dom = (i) => {
-          if (i % 10000 == 0) {
-            targetList.innerHTML = "";
-          }
+          if (i % 100 == 0) targetList.innerHTML = '';
+
           const li = document.createElement('li');
           li.textContent = `Item ${i}`;
           targetList.appendChild(li);
